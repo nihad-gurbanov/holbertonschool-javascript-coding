@@ -9,7 +9,7 @@ request.get(url, (err, response, body) => {
     console.error('Error:', err);
     return;
   }
-  
+
   try {
     const data = JSON.parse(body);
     const completedTasks = {};
