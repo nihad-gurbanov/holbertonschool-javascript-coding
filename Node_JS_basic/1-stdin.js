@@ -8,7 +8,9 @@ const rl = readline.createInterface({
 console.log('Welcome to Holberton School, what is your name?');
 
 rl.on('line', (input) => {
-  console.log(`Your name is: ${input}`);
+  const cleanedInput = input.trim();
+
+  console.log(`Your name is: ${cleanedInput}`);
   rl.close();
 });
 
