@@ -1,30 +1,69 @@
-const http = require('http');
-const fs = require('fs');
+/* eslint-disable */
 
-const server = http.createServer((req, res) => {
-  if (req.url === '/') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Hello Holberton School!');
-  } else if (req.url === '/students') {
-    const database = process.argv[2];
-    fs.readFile(database, 'utf8', (err, data) => {
+const http = require("http");
+const fs = require("fs");
+
+const port = 1245;
+
+const countStudents = (fileName) => {
+  return new Promise((resolve, reject) => {
+    fs.readFile(fileName, 'utf8', (err, data) => {
       if (err) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Error reading the database file');
+        reject(err);
       } else {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end(`This is the list of our students\n${data}`);
+        const students = {};
+        const fields = {};
+        let numStudents = 0;
+        const lines = data.trim().split('\n');
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i]) {
+            numStudents++;
+            const [firstName, lastName, email, field] = lines[i].split(',');
+            if (!students[field]) {
+              students[field] = [];
+            }
+            students[field].push(firstName);
+            if (!fields[field]) {
+              fields[field] = 0;
+            }
+            fields[field]++;
+          }
+        }
+        let output = `This is the list of our students\nNumber of students: ${numStudents}\n`;
+        for (const [field, count] of Object.entries(fields)) {
+          output += `Number of students in ${field}: ${count}. List: ${students[field].join(', ')}\n`;
+        }
+        resolve(output.trim());
       }
     });
+  });
+};
+
+const app = http.createServer((req, res) => {
+  if (req.url === '/') {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
+    res.end('Hello Holberton School!');
+  } else if (req.url === '/students') {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
+    countStudents(process.argv[2])
+      .then((output) => {
+        res.end(output);
+      })
+      .catch((err) => {
+        res.statusCode = 500;
+        res.end('Error: Cannot load the database');
+      });
   } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.statusCode = 404;
+    res.setHeader('Content-Type', 'text/plain');
     res.end('Page not found');
   }
 });
 
-const port = 1245;
-server.listen(port, () => {
+app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}/`);
 });
 
-module.exports = server;
+module.exports = app;
