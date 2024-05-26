@@ -1,60 +1,66 @@
-const express = require('express');
-const fs = require('fs');
+/* eslint-disable */
+
+const express = require("express");
+
+const { readFile } = require("fs");
 
 const app = express();
+const port = 1245;
 
-// Function to read file asynchronously
-const readFileAsync = (filename) => new Promise((resolve, reject) => {
-  fs.readFile(filename, 'utf8', (err, data) => {
-    if (err) {
-      reject(err);
-    } else {
-      resolve(data);
-    }
-  });
-});
-
-// Function to parse CSV file and count students by department
-const parseCSV = (data) => {
-  const students = {
-    CS: [],
-    SWE: [],
-  };
-
-  const lines = data.split('\n').filter((line) => line.trim() !== ''); // Removing empty lines
-
-  lines.forEach((line) => {
-    const [name, department] = line.split(',');
-    if (name && department) {
-      if (department.trim() === 'CS') {
-        students.CS.push(name.trim());
-      } else if (department.trim() === 'SWE') {
-        students.SWE.push(name.trim());
+function countStudents(fileName) {
+  const students = {};
+  const fields = {};
+  let length = 0;
+  return new Promise((resolve, reject) => {
+    readFile(fileName, (err, data) => {
+      if (err) {
+        reject(err);
+      } else {
+        let output = "";
+        const lines = data.toString().split("\n");
+        for (let i = 0; i < lines.length; i += 1) {
+          if (lines[i]) {
+            length += 1;
+            const field = lines[i].toString().split(",");
+            if (Object.prototype.hasOwnProperty.call(students, field[3])) {
+              students[field[3]].push(field[0]);
+            } else {
+              students[field[3]] = [field[0]];
+            }
+            if (Object.prototype.hasOwnProperty.call(fields, field[3])) {
+              fields[field[3]] += 1;
+            } else {
+              fields[field[3]] = 1;
+            }
+          }
+        }
+        const l = length - 1;
+        output += `Number of students: ${l}\n`;
+        for (const [key, value] of Object.entries(fields)) {
+          if (key !== "field") {
+            output += `Number of students in ${key}: ${value}. `;
+            output += `List: ${students[key].join(", ")}\n`;
+          }
+        }
+        resolve(output);
       }
-    }
+    });
   });
+}
 
-  return students;
-};
-
-// Endpoint for /
-app.get('/', (req, res) => {
-  res.send('Hello Holberton School!');
+app.get("/", (req, res) => {
+  res.send("Hello Holberton School!");
+});
+app.get("/students", (req, res) => {
+  countStudents(process.argv[2].toString())
+    .then((output) => {
+      res.send(["This is the list of our students", output].join("\n"));
+    })
+    .catch(() => {
+      res.send("This is the list of our students\nCannot load the database");
+    });
 });
 
-// Endpoint for /students
-app.get('/students', async (req, res) => {
-  try {
-    const { database } = req.query;
-    const data = await readFileAsync(database);
-    const students = parseCSV(data);
-    const output = `This is the list of our students\nNumber of students: ${students.CS.length + students.SWE.length}\nNumber of students in CS: ${students.CS.length}. List: ${students.CS.join(', ')}\nNumber of students in SWE: ${students.SWE.length}. List: ${students.SWE.join(', ')}`;
-    res.send(output);
-  } catch (err) {
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-// Start server
+app.listen(port, () => {});
 
 module.exports = app;
